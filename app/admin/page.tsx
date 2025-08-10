@@ -14,7 +14,7 @@ export default function AdminPage() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-4xl font-bold tracking-tight">Admin Dashboard</h1>
+        <h1 className="text-4xl font-bold tracking-tight text-white">Admin Dashboard</h1>
         <p className="text-muted-foreground">Manage and track all incoming print requests.</p>
         <Separator className="mt-4" />
       </div>

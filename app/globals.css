@@ -120,3 +120,7 @@
     @apply bg-background text-foreground;
   }
 }
+
+html, body {
+  background-color: #0f172a; /* Tailwind's slate-900 */
+}

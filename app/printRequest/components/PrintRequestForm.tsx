@@ -1,83 +1,75 @@
-"use client";
+'use client';
 
-import { usePrint } from "@/lib/PrintContext";
-import { FormEvent, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
+import { usePrint } from '@/lib/PrintContext';
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { toast } from "sonner";
+import { FiUploadCloud } from 'react-icons/fi';
+import { Progress } from "@/components/ui/progress";
 
-export const PrintRequestForm = () => {
+export function PrintRequestForm() {
   const { addJob } = usePrint();
-  const [fileName, setFileName] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!fileName) {
-      alert("Please select a file.");
-      return;
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isUploading && progress < 100) {
+      timer = setTimeout(() => setProgress(prev => prev + 10), 200);
+    } else if (progress >= 100) {
+      setIsUploading(false);
+      if (file) {
+        addJob({ fileName: file.name, settings: { copies: 1, pagesPerSheet: '1' } });
+        toast.success("Upload Complete!", { 
+            description: `"${file.name}" has been submitted.`
+        });
+      }
     }
-    const formData = new FormData(e.currentTarget);
-    const settings = {
-      pagesPerSheet: formData.get("pagesPerSheet") as "1" | "2" | "4",
-      copies: Number(formData.get("copies")),
-    };
+    return () => clearTimeout(timer);
+  }, [isUploading, progress, file, addJob]);
 
-    addJob({ fileName, settings });
-    alert(`Job for "${fileName}" submitted!`);
-
-    // Reset form
-    setFileName("");
-    e.currentTarget.reset();
+  const handleFileChange = (files: FileList | null) => {
+    if (files && files[0]) {
+      setFile(files[0]);
+      setProgress(0);
+      setIsUploading(true);
+    } else {
+        toast.error("No file selected", {
+            description: "Please choose a file to upload.",
+        });
+    }
   };
 
   return (
-    <Card className="max-w-lg border border-gray-200 shadow-md">
-      <CardContent className="pt-6 space-y-6">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* File Upload */}
-          <div className="space-y-2">
-            <Label htmlFor="file-upload">File Upload</Label>
-            <Input
-              id="file-upload"
-              name="file"
-              type="file"
-              required
-              onChange={(e) => setFileName(e.target.files?.[0]?.name || "")}
-              className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 
-                         file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground 
-                         hover:file:bg-primary/90 cursor-pointer"
-            />
-          </div>
+    <div className="w-full min-h-full text-center">
+      <FiUploadCloud className="mx-auto h-16 w-16 text-slate-400 mb-4" />
+      <h2 className="text-2xl font-bold mb-2">Upload File</h2>
+      <p className="text-slate-400 mb-6">{file ? `Uploading: ${file.name}` : "Select a file to begin"}</p>
+      
+      <div className="relative mb-6">
+        <Button asChild className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold py-6 text-lg rounded-xl shadow-lg hover:scale-105 transition-transform">
+           <label htmlFor="file-upload" className="cursor-pointer">Select File</label>
+        </Button>
+        <Input 
+          id="file-upload" 
+          type="file" 
+          className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer"
+          onChange={(e) => handleFileChange(e.target.files)}
+          disabled={isUploading}
+        />
+      </div>
 
-          {/* Pages Per Sheet */}
-          <div className="space-y-2">
-            <Label htmlFor="pagesPerSheet">Pages Per Sheet</Label>
-            <Select name="pagesPerSheet" defaultValue="1">
-              <SelectTrigger>
-                <SelectValue placeholder="Select pages per sheet" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">1</SelectItem>
-                <SelectItem value="2">2</SelectItem>
-                <SelectItem value="4">4</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Copies */}
-          <div className="space-y-2">
-            <Label htmlFor="copies">Copies</Label>
-            <Input type="number" id="copies" name="copies" defaultValue="1" min="1" />
-          </div>
-
-          {/* Submit Button */}
-          <Button type="submit" className="w-full font-semibold">
-            Submit Request
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+      {isUploading || progress > 0 ? (
+        <div className="space-y-2 text-left">
+            <p className="text-sm text-slate-300">
+                {progress < 100 ? 'Active complete' : 'Completed'}
+                <span className="float-right font-semibold">{progress}%</span>
+            </p>
+            <Progress value={progress} className="w-full h-3 [&>*]:bg-gradient-to-r [&>*]:from-cyan-400 [&>*]:to-green-400" />
+        </div>
+      ) : null}
+    </div>
   );
-};
+}
